@@ -26,4 +26,25 @@ router.post('/', async (req, res) => {
 //       res.status(400).json({ error: err.message });
 //     }
 //   });
+
+// Get stock checks for a specific date
+router.get('/', async (req, res) => {
+    try {
+      const { date } = req.query;
+      if (!date) return res.status(400).json({ message: 'Date is required' });
+  
+      const start = new Date(date);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+  
+      const result = await StockCheck.find({
+        date: { $gte: start, $lte: end }
+      }).populate('item');
+  
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
 module.exports = router;
