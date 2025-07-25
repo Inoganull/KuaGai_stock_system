@@ -3,48 +3,42 @@ const router = express.Router();
 const StockCheck = require('../models/StockCheck');
 
 router.get('/', async (req, res) => {
-    const list = await StockCheck.find().populate('item').sort({ date: -1 });
-    res.json(list);
-});
-
-router.post('/', async (req, res) => {
-    const entry = new StockCheck(req.body);
-    await entry.save();
-    res.status(201).json(entry);
-});
-
-// Check later
-// router.post('/', async (req, res) => {
-//     try {
-//       const stockCheck = new StockCheck({
-//         item: req.body.item,
-//         quantity_checked: req.body.quantity_checked
-//       });
-//       await stockCheck.save();
-//       res.status(201).json(stockCheck);
-//     } catch (err) {
-//       res.status(400).json({ error: err.message });
-//     }
-//   });
-
-// Get stock checks for a specific date
-router.get('/', async (req, res) => {
     try {
-      const { date } = req.query;
-      if (!date) return res.status(400).json({ message: 'Date is required' });
-  
-      const start = new Date(date);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
-  
-      const result = await StockCheck.find({
-        date: { $gte: start, $lte: end }
-      }).populate('item');
-  
-      res.json(result);
+        const { date } = req.query;
+
+        let query = {};
+        if (date) {
+            const start = new Date(date);
+            const end = new Date(date);
+            end.setHours(23, 59, 59, 999);
+            query.date = { $gte: start, $lte: end };
+        }
+
+        const result = await StockCheck.find(query).populate('item').sort({ date: -1 });
+        res.json(result);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err.message });
     }
-  });
-  
+});
+    
+router.post('/', async (req, res) => {
+    const { item, quantity_checked } = req.body;
+
+    if (!item || quantity_checked === undefined) {
+        return res.status(400).json({ error: 'Item and quantity_checked are required' });
+    }
+
+    if (quantity_checked < 0) {
+        return res.status(400).json({ error: 'Quantity checked cannot be negative' });
+    }
+
+    try {
+        const entry = new StockCheck({ item, quantity_checked });
+        await entry.save();
+        res.status(201).json(entry);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to save stock check' });
+    }
+});
+    
 module.exports = router;
